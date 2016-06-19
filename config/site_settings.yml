@@ -57,7 +57,7 @@ required:
 
 basic:
   default_locale:
-    default: 'en'
+    default: 'zh_CN'
     enum: 'LocaleSiteSetting'
     refresh: true
     shadowed_by_global: true
