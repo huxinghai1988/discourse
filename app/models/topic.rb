@@ -99,6 +99,7 @@ class Topic < ActiveRecord::Base
   belongs_to :featured_user3, class_name: 'User', foreign_key: :featured_user3_id
   belongs_to :featured_user4, class_name: 'User', foreign_key: :featured_user4_id
   belongs_to :auto_close_user, class_name: 'User', foreign_key: :auto_close_user_id
+  has_and_belongs_to_many :tags
 
   has_many :topic_users
   has_many :topic_links

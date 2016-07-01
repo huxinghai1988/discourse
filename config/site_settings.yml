@@ -765,8 +765,8 @@ rate_limits:
     default:
       test: 0
       default: 5
-  rate_limit_create_topic: 15
-  rate_limit_create_post: 5
+  rate_limit_create_topic: 120
+  rate_limit_create_post: 30
   rate_limit_new_user_create_topic: 120
   rate_limit_new_user_create_post: 30
   max_topics_per_day: 20
