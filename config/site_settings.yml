@@ -294,7 +294,7 @@ users:
     min: 1
   max_username_length:
     client: true
-    default: 20
+    default: 28
     min: 8
     max: 60
   reserved_usernames:

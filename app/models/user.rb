@@ -415,6 +415,10 @@ class User < ActiveRecord::Base
     created_at >= 24.hours.ago
   end
 
+  def is_stackoverflow?
+    email =~ /^\d{0,20}@stackoverflow.com$/ ? true : false
+  end
+
   def new_user?
     (created_at >= 24.hours.ago || trust_level == TrustLevel[0]) &&
       trust_level < TrustLevel[2] &&

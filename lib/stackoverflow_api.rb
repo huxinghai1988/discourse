@@ -18,20 +18,43 @@ class StackoverflowApi
     end
   end
 
-  def set_config(opts = {})
-    f = File.new(@config_path, 'w')
-    f.write(opts.to_json)
-    f.close
-    opts
+
+
+  def fetch_by(ids = [])
+    RestClient.get("#{@domain}/questions/#{ids.join(';')}", {params: {order: 'asc', sort: "activity", site: "stackoverflow"}}) do |response, request, result|
+      unless response.code == 200
+        puts "code: #{response.code}, #{response.body}"
+        return
+      end
+      res = JSON.parse(response.body)
+      res["items"].map do |item|
+        opts = format_result(item)
+        yield(opts) if block_given?
+        opts
+      end
+    end
   end
 
-  def get_body(url)
-    doc = Nokogiri::HTML(open(url))
-    items = doc.css(".question .post-text")
-    return items[0].inner_html if items.present?
+  def fetch_answers(post_id, doc)
+    RestClient.get("#{@domain}/questions/#{post_id}/answers", {params: {order: 'desc', sort: "votes", site: "stackoverflow"}}) do |response, request, result|
+      unless response.code == 200
+        puts "code: #{response.code}, #{response.body}"
+        return
+      end
+      res = JSON.parse(response.body)
+      res["items"].map do |item|
+        {
+          id: item["answer_id"],
+          created_at: Time.at(item["creation_date"]),
+          body: doc.css("#answer-#{item['answer_id']} .post-text").inner_html,
+          post_type: item["is_accepted"] ? 2 : 1,
+          user: format_user(item["owner"])
+        }
+      end
+    end
   end
 
-  def fetch
+  def fetch(&block)
     RestClient.get("#{@domain}/questions", {:params => {order: 'asc', sort: "activity", site: "stackoverflow"}.merge(get_config)}) do |response, request, result|
       unless response.code == 200
         puts "code: #{response.code}, #{response.body}"
@@ -44,28 +67,58 @@ class StackoverflowApi
       end
 
       res["items"].each do |item|
-        username = item['owner']['display_name'].gsub(/[^\w|\-|_]/, "")
-        username = "#{username}#{rand(0..100)}" if username.length < 3
-
-        yield({
-          user: {
-            email: "#{item['owner']['user_id']}@stackoverflow.com",
-            username: username,
-            password: "#{item['owner']['user_id']}stackoverflow#{item["question_id"]}"
-          },
-          topic: {
-            id: item['question_id'],
-            title: item['title'],
-            source_id: item['question_id'],
-            source_type: 'StackOverFlow',
-            tags: item["tags"],
-            body: get_body(item['link'])
-          }
-        }) if block_given?
+        opts = format_result(item)
+        yield(opts) if block_given?
       end
       opts = get_config
       set_config(opts.merge(page: opts[:page]+1))
     end
+  end
+
+  private
+
+  def set_config(opts = {})
+    f = File.new(@config_path, 'w')
+    f.write(opts.to_json)
+    f.close
+    opts
+  end
+
+  def resolve_content(url, doc)
+    items = doc.css(".question .post-text")
+    if items.present?
+      return <<-HTML
+        #{items[0].inner_html}
+        \n
+        原文链接：<a href='#{url}'>#{url}</a>
+      HTML
+    end
+  end
+
+  def format_result(item)
+    doc = Nokogiri::HTML(open(item['link']))
+    {
+      user: format_user(item["owner"]),
+      topic: {
+        id: item['question_id'],
+        title: item['title'],
+        source_id: item['question_id'],
+        source_type: 'StackOverFlow',
+        tags: item["tags"],
+        body: resolve_content(item['link'], doc),
+        answers: fetch_answers(item['question_id'], doc)
+      }
+    }
+  end
+
+  def format_user(item)
+    username = item['display_name'].gsub(/[^\w|\-|_]/, "")
+    username = "#{username}#{rand(0..100)}" if username.length < 3
+    {
+      email: "#{item['user_id']}@stackoverflow.com",
+      username: username,
+      password: "#{item['user_id']}stackoverflow"
+    }
   end
 
   def self.klass

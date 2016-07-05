@@ -75,6 +75,7 @@ class Topic < ActiveRecord::Base
 
   before_validation do
     self.title = TextCleaner.clean_title(TextSentinel.title_sentinel(title).text) if errors[:title].empty?
+    disable_rate_limits! if user && user.is_stackoverflow?
   end
 
   belongs_to :category
@@ -800,6 +801,10 @@ class Topic < ActiveRecord::Base
 
   def notifier
     @topic_notifier ||= TopicNotifier.new(self)
+  end
+
+  def is_post_cook?
+    !%(StackOverFlow).include?(source_type)
   end
 
   def muted?(user)

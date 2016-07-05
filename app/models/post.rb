@@ -64,6 +64,10 @@ class Post < ActiveRecord::Base
   scope :visible, -> { joins(:topic).where('topics.visible = true').where(hidden: false) }
   scope :secured, lambda { |guardian| where('posts.post_type in (?)', Topic.visible_post_types(guardian && guardian.user))}
 
+  before_validation do
+    disable_rate_limits! if user && user.is_stackoverflow?
+  end
+
   delegate :username, to: :user
 
   def self.hidden_reasons
@@ -493,7 +497,7 @@ class Post < ActiveRecord::Base
 
   before_save do
     self.last_editor_id ||= user_id
-    self.cooked = cook(raw, topic_id: topic_id) unless new_record?
+    self.cooked = cook(raw, topic_id: topic_id) if persisted? && topic.is_post_cook?
     self.baked_at = Time.new
     self.baked_version = BAKED_VERSION
   end
