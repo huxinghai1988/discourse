@@ -48,7 +48,8 @@ class StackoverflowApi
           created_at: Time.at(item["creation_date"]),
           body: doc.css("#answer-#{item['answer_id']} .post-text").inner_html,
           post_type: item["is_accepted"] ? 2 : 1,
-          user: format_user(item["owner"])
+          user: format_user(item["owner"]),
+          last_activity_date: Time.at(item["last_activity_date"])
         }
       end
     end
@@ -106,6 +107,7 @@ class StackoverflowApi
         source_type: 'StackOverFlow',
         tags: item["tags"],
         body: resolve_content(item['link'], doc),
+        last_activity_date: Time.at(item["last_activity_date"]),
         answers: fetch_answers(item['question_id'], doc)
       }
     }

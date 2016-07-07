@@ -6,6 +6,7 @@ namespace :topic do
   task :fetch_stackoverflow => :environment do
 
     StackoverflowApi.klass.fetch do |item|
+      puts "item: #{item}"
       user = find_or_create(item[:user])
       if user
         topic = Topic.find_or_initialize_by(
@@ -22,7 +23,8 @@ namespace :topic do
             topic.posts.create(
               raw: SanitizeViewHelper.untils.strip_tags(item[:topic][:body]),
               user: user,
-              cooked: item[:topic][:body]
+              cooked: item[:topic][:body],
+              last_version_at: item[:topic][:last_activity_date]
             )
             item[:topic][:answers].each do |answer|
               user = find_or_create(answer[:user])
@@ -31,7 +33,8 @@ namespace :topic do
                 raw: SanitizeViewHelper.untils.strip_tags(answer[:body]),
                 user: user,
                 cooked: answer[:body],
-                post_type: answer[:post_type]
+                post_type: answer[:post_type],
+                last_version_at: answer[:last_activity_date]
               })
             end
             puts "topic: #{item[:topic][:source_id]}"
